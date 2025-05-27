@@ -308,6 +308,54 @@ function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 </script>
+<button id="btnEstadisticas">📊</button>
+<div id="estadisticas" style="display:none;">
+  <input type="password" id="codigoAcceso" placeholder="Introduce código">
+  <button id="btnVerEstadisticas">Ver estadísticas</button>
+  <button id="btnReiniciarTodo">Reiniciar todos los votos</button>
+  <div id="contenidoEstadisticas"></div>
+</div>
+
+<script>
+const btnEstadisticas = document.getElementById("btnEstadisticas");
+const estadisticas = document.getElementById("estadisticas");
+const btnVerEstadisticas = document.getElementById("btnVerEstadisticas");
+const btnReiniciarTodo = document.getElementById("btnReiniciarTodo");
+const codigoAcceso = document.getElementById("codigoAcceso");
+const contenidoEstadisticas = document.getElementById("contenidoEstadisticas");
+
+btnEstadisticas.addEventListener("click", () => {
+    estadisticas.style.display = estadisticas.style.display === "none" ? "block" : "none";
+});
+
+btnVerEstadisticas.addEventListener("click", () => {
+    if (codigoAcceso.value === "1928") {
+        const resultados = JSON.parse(localStorage.getItem("resultados_votacion") || "{}");
+        if (Object.keys(resultados).length === 0) {
+            contenidoEstadisticas.textContent = "No hay votos aún.";
+        } else {
+            contenidoEstadisticas.innerHTML = "";
+            for (let candidato in resultados) {
+                contenidoEstadisticas.innerHTML += `<strong>${candidato}:</strong> ${resultados[candidato].join(", ")}<br>`;
+            }
+        }
+    } else {
+        alert("Código incorrecto");
+    }
+});
+
+btnReiniciarTodo.addEventListener("click", () => {
+    if (codigoAcceso.value === "1928") {
+        if (confirm("¿Seguro que quieres reiniciar todos los votos globales?")) {
+            localStorage.clear();
+            alert("Todos los votos han sido reiniciados.");
+            contenidoEstadisticas.textContent = "Todos los votos fueron eliminados.";
+        }
+    } else {
+        alert("Código incorrecto");
+    }
+});
+</script>
 
 </body>
 </html>
