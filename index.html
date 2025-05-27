@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Encuesta de Votación Mejorada</title>
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #74ebd5 0%, #ACB6E5 100%);
+        color: #333;
+        margin: 0; padding: 20px;
+        display: flex; flex-direction: column; align-items: center;
+        min-height: 100vh;
+    }
+    h1, h2, h3 {
+        color: #1a1a2e;
+        text-align: center;
+    }
+    #botones-superior {
+        width: 100%;
+        max-width: 400px;
+        display: flex; justify-content: space-between;
+        margin-bottom: 15px;
+    }
+    button {
+        background-color: #16213e;
+        color: #e0e0e0;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.3s ease;
+    }
+    button:hover {
+        background-color: #0f3460;
+    }
+    button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+        color: #666;
+    }
+    #form-nombre, #encuesta, #gracias, #ver-votos {
+        background: rgba(255, 255, 255, 0.85);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        width: 100%;
+        max-width: 400px;
+    }
+    #imagen-candidato {
+        display: block;
+        margin: 0 auto 15px auto;
+        border-radius: 10px;
+        max-width: 100%;
+        height: auto;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .opcion {
+        margin: 6px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    input[type="checkbox"] {
+        transform: scale(1.2);
+        cursor: pointer;
+    }
+    #texto-secreto {
+        margin-left: 5px;
+        flex-grow: 1;
+        padding: 5px;
+        border-radius: 4px;
+        border: 1px solid #999;
+        font-size: 0.9em;
+    }
+    #votos-secreto p {
+        margin: 3px 0;
+    }
+</style>
+</head>
+<body>
+
+<div id="botones-superior">
+    <button id="boton-gpt" title="Ver votos ocultos">.gpt.</button>
+    <button id="boton-reiniciar" title="Reiniciar todos los votos">Reiniciar votos</button>
+</div>
+
+<div id="form-nombre">
+    <h2>Introduce tu nombre para votar:</h2>
+    <input type="text" id="nombre" autocomplete="off" />
+    <button id="btn-entrar">Entrar</button>
+</div>
+
+<div id="encuesta" style="display:none;">
+    <h3 id="titulo-encuesta"></h3>
+    <img id="imagen-candidato" src="" alt="Imagen del candidato" width="200" />
+    <form id="form-opciones">
+        <div class="opcion"><input type="checkbox" name="opciones" value="Creador/a de criminales" /> Creador/a de criminales</div>
+        <div class="opcion"><input type="checkbox" name="opciones" value="Humorist" /> Humorist</div>
+        <div class="opcion"><input type="checkbox" name="opciones" value="Inteligenz" /> Inteligenz</div>
+        <div class="opcion"><input type="checkbox" name="opciones" value="Cringe" /> Cringe</div>
+        <div class="opcion"><input type="checkbox" name="opciones" value="Meisner Freund" /> Meisner Freund (buen dibujante/a)</div>
+        <div class="opcion">
+            <input type="checkbox" id="opcion-secreta" name="opciones" value="Secreta" />
+            <label for="opcion-secreta">Opción secreta</label>
+            <input type="text" id="texto-secreto" placeholder="Tu opción..." style="display:none;" maxlength="30" />
+        </div>
+        <div class="opcion"><input type="checkbox" name="opciones" value="Ninguna" /> Ninguna de las anteriores</div>
+    </form>
+    <button id="btn-enviar">Enviar voto</button>
+</div>
+
+<div id="gracias" style="display:none;">
+    <h3>Gracias por votar</h3>
+</div>
+
+<div id="ver-votos" style="display:none;">
+    <h3>Resultados de la votación</h3>
+    <div id="votos-secreto"></div>
+</div>
+
+<script>
+const candidatos = ["gioele", "alex", "dani", "levi", "adriana"];
+const imagenes = {
+    gioele: "gioele.jpg",
+    alex: "alex.jpg",
+    dani: "dani.jpg",
+    levi: "levi.jpg",
+    adriana: "adriana.jpg"
+};
+
+let votanteNombre = "";
+let indiceCandidato = 0;
+let votosUsados = []; // opciones ya usadas globalmente
+
+const inputNombre = document.getElementById("nombre");
+const btnEntrar = document.getElementById("btn-entrar");
+const formNombre = document.getElementById("form-nombre");
+const encuesta = document.getElementById("encuesta");
+const tituloEncuesta = document.getElementById("titulo-encuesta");
+const imagenCandidato = document.getElementById("imagen-candidato");
+const btnEnviar = document.getElementById("btn-enviar");
+const gracias = document.getElementById("gracias");
+const verVotosDiv = document.getElementById("ver-votos");
+const votosSecretoDiv = document.getElementById("votos-secreto");
+const botonGpt = document.getElementById("boton-gpt");
+const botonReiniciar = document.getElementById("boton-reiniciar");
+const opcionSecretaCheckbox = document.getElementById("opcion-secreta");
+const textoSecretoInput = document.getElementById("texto-secreto");
+const formOpciones = document.getElementById("form-opciones");
+
+opcionSecretaCheckbox.addEventListener("change", () => {
+    textoSecretoInput.style.display = opcionSecretaCheckbox.checked ? "inline-block" : "none";
+    if(!opcionSecretaCheckbox.checked) textoSecretoInput.value = "";
+});
+
+btnEntrar.addEventListener("click", () => {
+    const nombre = inputNombre.value.trim().toLowerCase();
+    if (!nombre) {
+        alert("Por favor, introduce tu nombre.");
+        return;
+    }
+    votanteNombre = nombre;
+    if(localStorage.getItem(`yaVotado_${votanteNombre}`)) {
+        alert("Ya has votado desde este dispositivo.");
+        mostrarGracias();
+        return;
+    }
+    votosUsados = cargarVotosUsados();
+    formNombre.style.display = "none";
+    indiceCandidato = 0;
+    mostrarSiguienteCandidato();
+});
+
+function mostrarSiguienteCandidato() {
+    // Saltar candidato si es el votante mismo
+    while(indiceCandidato < candidatos.length && candidatos[indiceCandidato].toLowerCase() === votanteNombre) {
+        indiceCandidato++;
+    }
+
+    if(indiceCandidato >= candidatos.length) {
+        guardarVotoFinal();
+        mostrarGracias();
+        return;
+    }
+
+    const candidato = candidatos[indiceCandidato];
+    tituloEncuesta.textContent = `Vota por ${capitalize(candidato)}`;
+    imagenCandidato.src = imagenes[candidato] || "";
+    limpiarOpciones();
+    encuesta.style.display = "block";
+}
+
+function limpiarOpciones() {
+    formOpciones.querySelectorAll("input[type=checkbox]").forEach(chk => {
+        chk.checked = false;
+        chk.disabled = false;
+    });
+    textoSecretoInput.value = "";
+    textoSecretoInput.style.display = "none";
+    opcionSecretaCheckbox.checked = false;
+
+    // Deshabilitar opciones que ya usaste
+    formOpciones.querySelectorAll("input[type=checkbox]").forEach(chk => {
+        if(votosUsados.includes(chk.value) && chk.value !== "Secreta") {
+            chk.disabled = true;
+        }
+    });
+}
+
+function enviarVoto() {
+    const checkboxes = Array.from(formOpciones.querySelectorAll("input[type=checkbox]:checked"));
+
+    if(checkboxes.length === 0) {
+        alert("Debes seleccionar al menos una opción.");
+        return;
+    }
+
+    // Si la opción secreta está seleccionada, el texto no puede estar vacío
+    if(opcionSecretaCheckbox.checked) {
+        const texto = textoSecretoInput.value.trim();
+        if(!texto) {
+            alert("Debes escribir la opción secreta.");
+            return;
+        }
+        // Cambiar el value de ese checkbox por el texto personalizado
+        opcionSecretaCheckbox.value = texto;
+    }
+
+    // Comprobar si alguna opción seleccionada ya fue usada (menos la secreta, que la validamos ahora)
+    for(let chk of checkboxes) {
+        if(chk.value !== "Secreta" && votosUsados.includes(chk.value)) {
+            alert(`La opción "${chk.value}" ya fue usada para otro candidato.`);
+            return;
+        }
+    }
+
+    // Guardar los votos para este candidato
+    const candidato = candidatos[indiceCandidato];
+    let resultados = JSON.parse(localStorage.getItem("resultados_votacion") || "{}");
+    resultados[candidato] = checkboxes.map(chk => chk.value);
+    localStorage.setItem("resultados_votacion", JSON.stringify(resultados));
+
+    // Añadir las opciones usadas a la lista global de usados (excepto la secreta que puede repetirse)
+    checkboxes.forEach(chk => {
+        if(chk.value !== "Secreta" && !votosUsados.includes(chk.value)) {
+            votosUsados.push(chk.value);
+        }
+    });
+    guardarVotosUsados();
+
+    indiceCandidato++;
+    mostrarSiguienteCandidato();
+}
+
+function guardarVotoFinal() {
+    localStorage.setItem(`yaVotado_${votanteNombre}`, "true");
+}
+
+function mostrarGracias() {
+    encuesta.style.display = "none";
+    formNombre.style.display = "none";
+    gracias.style.display = "block";
+}
+
+function cargarVotosUsados() {
+    return JSON.parse(localStorage.getItem("votos_usados_global") || "[]");
+}
+function guardarVotosUsados() {
+    localStorage.setItem("votos_usados_global", JSON.stringify(votosUsados));
+}
+
+botonGpt.addEventListener("click", () => {
+    const resultados = JSON.parse(localStorage.getItem("resultados_votacion") || "{}");
+    votosSecretoDiv.innerHTML = "";
+    if(Object.keys(resultados).length === 0) {
+        votosSecretoDiv.textContent = "No hay votos aún.";
+    } else {
+        for(let candidato in resultados) {
+            votosSecretoDiv.innerHTML += `<strong>${capitalize(candidato)}:</strong> ${resultados[candidato].join(", ")}<br>`;
+        }
+    }
+    verVotosDiv.style.display = verVotosDiv.style.display === "none" ? "block" : "none";
+});
+
+botonReiniciar.addEventListener("click", () => {
+    if(confirm("¿Seguro que quieres reiniciar todos los votos? Se perderán todos los datos.")) {
+        localStorage.removeItem("resultados_votacion");
+        localStorage.removeItem("votos_usados_global");
+        candidatos.forEach(c => localStorage.removeItem(`yaVotado_${c}`));
+        votanteNombre = "";
+        indiceCandidato = 0;
+        votosUsados = [];
+        verVotosDiv.style.display = "none";
+        gracias.style.display = "none";
+        encuesta.style.display = "none";
+        formNombre.style.display = "block";
+        inputNombre.value = "";
+        alert("Votos reiniciados.");
+    }
+});
+
+btnEnviar.addEventListener("click", enviarVoto);
+
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+</script>
+
+</body>
+</html>
